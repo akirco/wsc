@@ -1,4 +1,26 @@
-. "$PSScriptRoot\config.ps1"
+$config_path = Join-Path $env:USERPROFILE ".config\scoop\config.json"
+
+if (!(Test-Path $config_path)) {
+  Write-Host "Please notice: $env:USERPROFILE\.config\scoop\config.json is available!" -ForegroundColor DarkYellow
+  return
+}
+
+$SCOOP_CONFIG_JSON = Get-Content -Path $config_path | ConvertFrom-Json
+
+$Global:root_path = $SCOOP_CONFIG_JSON.root_path
+
+$Global:global_path = $SCOOP_CONFIG_JSON.global_path
+
+$Global:LocalApps = $null
+
+$SOOP_LIB_PATH = Join-Path $(scoop prefix scoop) "lib"
+. $(Join-Path $SOOP_LIB_PATH "core.ps1")
+. $(Join-Path $SOOP_LIB_PATH "buckets.ps1")
+. $(Join-Path $SOOP_LIB_PATH "manifest.ps1")
+. $(Join-Path $SOOP_LIB_PATH "versions.ps1")
+
+$TEMP_APP_LIST = "$env:USERPROFILE\.config\scoop\APP_LIST.json"
+
 
 function Get-ScoopBucketsFullPath() {
   param(
@@ -69,7 +91,7 @@ function Get-DynamicThrottleLimit {
   return $maxThreads
 }
 
-function GetScoopLocalApp {
+function Get-ScoopLocalApp {
   param(
     [string]$searchTarget
   )
@@ -109,12 +131,63 @@ function GetScoopLocalApp {
   $searchResult | ForEach-Object {
     $app = $_
     $matchingApp = $installedApps | Where-Object {
-
       $_.Name -eq $app.Name -and $_.Source -eq $app.Source
     }
     if ($matchingApp) {
       $app.Installed = $true
     }
   }
-  return $searchResult | Sort-Object -Property Installed -Descending
+  return $searchResult #| Sort-Object -Property Installed -Descending
 }
+
+function CheckScoopStatus {
+
+  $currentdir = versiondir 'scoop' 'current'
+  $needs_update = $false
+  $bucket_needs_update = $false
+  $script:network_failure = $false
+  $no_remotes = $args[0] -eq '-l' -or $args[0] -eq '--local'
+  if (!(Get-Command git -ErrorAction SilentlyContinue)) { $no_remotes = $true }
+
+
+  function Test-UpdateStatus($repopath) {
+    if (Test-Path "$repopath\.git") {
+      Invoke-Git -Path $repopath -ArgumentList @('fetch', '-q', 'origin')
+      $script:network_failure = 128 -eq $LASTEXITCODE
+      $branch = Invoke-Git -Path $repopath -ArgumentList @('branch', '--show-current')
+      $commits = Invoke-Git -Path $repopath -ArgumentList @('log', "HEAD..origin/$branch", '--oneline')
+      if ($commits) { return $true }
+      else { return $false }
+    }
+    else {
+      return $true
+    }
+  }
+
+  if (!$no_remotes) {
+    $needs_update = Test-UpdateStatus $currentdir
+    foreach ($bucket in Get-LocalBucket) {
+      if (Test-UpdateStatus (Find-BucketDirectory $bucket -Root)) {
+        $bucket_needs_update = $true
+        break
+      }
+    }
+  }
+
+  if ($needs_update) {
+    Write-Host "`nScoop out of date. Run 'wsc su' to get the latest changes." -ForegroundColor DarkYellow
+    Remove-Item $TEMP_APP_LIST -Force -ErrorAction SilentlyContinue
+    exit
+  }
+  elseif ($bucket_needs_update) {
+    Write-Host "`nScoop bucket(s) out of date. Run 'wsc su' to get the latest changes." -ForegroundColor DarkYellow
+    Remove-Item $TEMP_APP_LIST -Force -ErrorAction SilentlyContinue
+    exit
+  }
+  elseif (!$script:network_failure -and !$no_remotes) {
+    break
+  }
+
+}
+
+CheckScoopStatus

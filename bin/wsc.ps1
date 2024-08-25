@@ -2,11 +2,13 @@ Set-StrictMode -Off
 
 $subCommand = $Args[0]
 
+$commandsPath = Join-Path $PSScriptRoot "..\commands"
+
 function command_path {
   param (
     [string]$cmd
   )
-  "$PSScriptRoot\..\commands\$cmd.ps1"
+  Join-Path $commandsPath "$cmd.ps1"
 }
 
 function exec($cmd, $arguments) {
@@ -14,9 +16,7 @@ function exec($cmd, $arguments) {
   & $cmd_path @arguments
 }
 
-function commands {
-  $(Get-ChildItem ".\commands").BaseName
-}
+$commands = [string[]]$(Get-ChildItem $commandsPath).BaseName
 function Show-VersionInfo {
   Write-Host "v0.1" -f DarkBlue
 }
@@ -30,8 +30,10 @@ switch ($subCommand) {
     ({ $subCommand -in @('-v', '--version') }) {
     Show-VersionInfo
   }
-    ({ $subCommand -in (commands) }) {
+    ({ $subCommand -in ($commands) }) {
+    # Write-Host "$subCommand - $commands"
     [string[]]$arguments = $Args | Select-Object -Skip 1
+    # Write-Host "arguments: $arguments"
     if ($null -ne $arguments -and $arguments[0] -in @('-h', '--help', '/?')) {
       exec 'help' @($subCommand)
     }

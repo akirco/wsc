@@ -51,10 +51,10 @@ function Write-Color {
 
 function Loading {
   param(
-    [scriptblock]$function,
+    [string]$script,
     [string]$Label
   )
-  $job = Start-Job -ScriptBlock $function
+  $job = Start-Job -FilePath $script
   $symbols = @("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
   $i = 0;
 
@@ -68,21 +68,12 @@ function Loading {
       $i = 0;
     }
   }
+
   $result = Receive-Job -Job $job
 
   Remove-Job -Job $job
 
   Write-Host -NoNewLine "`r"
 
-  return  $result
+  return $result
 }
-
-# $foo = {
-#   $a = systeminfo | find '"System Type"'
-#   return $a
-# }
-
-# $r = Loading -function $foo -Label "Searching..."
-
-
-# Write-Host $r

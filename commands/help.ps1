@@ -2,14 +2,12 @@ Write-Host @"
 ╔════════════════════╗
 ║░        wsc       ░║
 ╚════════════════════╝
-Usage: wsc -sqrmfy [<args>] -hv
+Usage: wsc si/su [<args>]
 
-   -s, -style             select [(l|light)|(m|mono)(p|paper)]
-   -q, -query             input starting search query
-   -r, -repository        browse a specific repo [core|extra|community|aur]
-   -m, -margin            set the margin 10|2,5|5,3,8|1,5,2,3
+   si  [-s/--skip]        install app with scoop
+   su                     update scoop
    -h, -help              show this help
-   -v, -version           get lsparu version
+   -v, -version           get wsc version
 
    ctrl-space             toggle package
    ctrl-d                 deselect-all
