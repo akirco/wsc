@@ -18,7 +18,7 @@ function exec($cmd, $arguments) {
 
 $commands = [string[]]$(Get-ChildItem $commandsPath).BaseName
 function Show-VersionInfo {
-  Write-Host "v0.1" -f DarkBlue
+  Write-Host "v0.1.0" -f DarkBlue
 }
 
 
